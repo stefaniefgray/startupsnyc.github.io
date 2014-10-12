@@ -1,1 +1,267 @@
-<!doctype html><html><head><title>Startups ♥ NY: Alternate visualizations of NYC's startup community.</title></head><body><h1><font face="Helvetica, Arial"><font size="48">Startups <big><font color="red">♥</font></big> NY<br></h1></font size><h3>New Yorkers need jobs.<br>Startups need talent.<br>Let's make some matches.</h3><p>Right now, <a href="http://www.mappedinny.com">Mapped in NY</a> displays the locations of startups and other tech companies throughout the five boroughs. You can check out the locations of coworking spaces, find investors, and most importantly, determine who's hiring. It's a killer display of the strength and prevalence of our tech industry - but for job seekers looking to differentiate between the next Google and the next Pets.com, it's lacking in details.<br><br><iframe width="500" height="300" scrolling="no" frameborder="no" src="https://www.google.com/fusiontables/embedviz?q=select+col9+from+1EHrziowBiyGULgCCmyN62RcKEMnsi5qtuRP818bz+where+col4+%3D+&#39;TRUE&#39;+limit+1000&amp;viz=HEATMAP&amp;h=true&amp;lat=40.74009365686845&amp;lng=-73.96901076650391&amp;t=1&amp;z=13&amp;l=col9&amp;y=2&amp;tmplt=2&amp;hmd=true&amp;hmg=%2366ff0000%2C%2393ff00ff%2C%23c1ff00ff%2C%23eeff00ff%2C%23f4e300ff%2C%23f4e300ff%2C%23f9c600ff%2C%23ffaa00ff%2C%23ff7100ff%2C%23ff3900ff%2C%23ff0000ff&amp;hmo=0.7&amp;hmr=20&amp;hmw=0&amp;hml=ONE_COL_LAT_LNG"></iframe>           <iframe width="500" height="300" scrolling="no" frameborder="no" src="https://www.google.com/fusiontables/embedviz?q=select+col9+from+18pFfwW87Twl136wyHymT_7ET_Bxhba3zHcrzsDV3+where+col4+%3D+&#39;FALSE&#39;+limit+1000&amp;viz=HEATMAP&amp;h=true&amp;lat=40.738377706659534&amp;lng=-73.98498149727783&amp;t=1&amp;z=15&amp;l=col9&amp;y=2&amp;tmplt=2&amp;hmd=true&amp;hmg=%2366ff0000%2C%2393ff00ff%2C%23c1ff00ff%2C%23eeff00ff%2C%23f4e300ff%2C%23f4e300ff%2C%23f9c600ff%2C%23ffaa00ff%2C%23ff7100ff%2C%23ff3900ff%2C%23ff0000ff&amp;hmo=0.7&amp;hmr=20&amp;hmw=0&amp;hml=ONE_COL_LAT_LNG"></iframe></html>
+<!doctype html><html><head><title>Startups ♥ NY: Alternate visualizations of NYC's startup community.</title><h1><font face="Helvetica, Arial"><font size="48">Startups <big><font color="red">♥</font></big> NY<br></h1></font size><h3>New Yorkers need jobs.<br>Startups need talent.<br>Let's make some matches.</h3><p>Right now, <a href="http://www.mappedinny.com">Mapped in NY</a> displays the locations of startups and other tech companies throughout the five boroughs. You can check out the locations of coworking spaces, find investors, and most importantly, determine who's hiring. It's a killer display of the strength and prevalence of our tech industry - but for job seekers looking to differentiate between the next Google and the next Pets.com, it's lacking in details.<br><br></head>
+
+<body><iframe>
+<style type="text/css">
+  html, body, #googft-mapCanvas {
+    height: 300px;
+    margin: 0;
+    padding: 0;
+    width: 500px;
+  }
+</style>
+
+<script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=false&amp;v=3&amp;libraries=visualization"></script>
+
+<script type="text/javascript">
+  if (window.location.protocol == "file:") {
+    alert('This script only works when loaded from a web server,' +
+        ' not from a file on your computer.');
+  }
+  function ftOnLoadClientApi() {
+    gapi.client.setApiKey('AIzaSyByGNZRo_v836WOMxG-BXEnQXvGasl0Qkc');
+  }
+</script>
+<script type="text/javascript" src="https://apis.google.com/js/client.js?onload=ftOnLoadClientApi">
+</script>
+
+<script type="text/javascript">
+  var map;
+
+  function loadApi() {
+    gapi.client.load('fusiontables', 'v1', initialize);
+  }
+
+  function initialize() {
+    var isMobile = (navigator.userAgent.toLowerCase().indexOf('android') > -1) ||
+      (navigator.userAgent.match(/(iPod|iPhone|iPad|BlackBerry|Windows Phone|iemobile)/));
+    if (isMobile) {
+      var viewport = document.querySelector("meta[name=viewport]");
+      viewport.setAttribute('content', 'initial-scale=1.0, user-scalable=no');
+    }
+    var mapDiv = document.getElementById('googft-mapCanvas');
+    mapDiv.style.width = isMobile ? '100%' : '500px';
+    mapDiv.style.height = isMobile ? '100%' : '300px';
+    map = new google.maps.Map(mapDiv, {
+      center: new google.maps.LatLng(40.74009365686845, -73.96901076650391),
+      zoom: 13,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+    var query = 'select col9 from 1EHrziowBiyGULgCCmyN62RcKEMnsi5qtuRP818bz limit 1000';
+    var request = gapi.client.fusiontables.query.sqlGet({ sql: query });
+    request.execute(function(response) {
+      onDataFetched(response);
+    });
+  }
+
+  function onDataFetched(response) {
+    if (response.error) {
+      alert('Unable to fetch data. ' + response.error.message +
+          ' (' + response.error.code + ')');
+    } else {
+      drawHeatmap(extractLocations(response.rows));
+    }
+  }
+
+  function extractLocations(rows) {
+    // Patterns for latitude/longitude in a single field, separated by a space
+    // or comma, with optional north/south/east/west orientation
+    var numberPattern = '([+-]?\\d+(?:\\.\\d*)?)';
+    var latPattern = numberPattern + '\\s*([NS])?';
+    var lngPattern = numberPattern + '\\s*([EW])?';
+    var latLngPattern = latPattern + '(?:\\s+|\\s*,\\s*)' + lngPattern;
+    var northRegexp = /N/i;
+    var eastRegexp = /E/i;
+    var parseRegexp = new RegExp(latLngPattern, 'i');
+    var locations = [];
+    for (var i = 0; i < rows.length; ++i) {
+      var row = rows[i];
+      if (row[0]) {
+        var parts = row[0].match(parseRegexp);
+        if (parts) {
+          var latString = parts[1];
+          var latOrientation = parts[2];
+          var lngString = parts[3];
+          var lngOrientation = parts[4];
+          var lat = parseFloat(latString);
+          var lng = parseFloat(lngString);
+          if (latOrientation) {
+            var latAdjust = northRegexp.test(latOrientation) ? 1 : -1;
+            lat = latAdjust * Math.abs(lat);
+          }
+          if (lngOrientation) {
+            var lngAdjust = eastRegexp.test(lngOrientation) ? 1 : -1;
+            lng = lngAdjust * Math.abs(lng);
+          }
+          var latLng = new google.maps.LatLng(lat, lng);
+          locations.push(latLng);
+        }
+      }
+    }
+    return locations;
+  }
+
+  function drawHeatmap(locations) {
+    var heatmap = new google.maps.visualization.HeatmapLayer({
+       dissipating: true,
+       gradient: [
+         'rgba(102,255,0,0)', 
+         'rgba(147,255,0,1)', 
+         'rgba(193,255,0,1)', 
+         'rgba(238,255,0,1)', 
+         'rgba(244,227,0,1)', 
+         'rgba(244,227,0,1)', 
+         'rgba(249,198,0,1)', 
+         'rgba(255,170,0,1)', 
+         'rgba(255,113,0,1)', 
+         'rgba(255,57,0,1)', 
+         'rgba(255,0,0,1)'
+       ],
+       opacity: 0.7,
+       radius: 20,
+       data: locations
+    });
+    heatmap.setMap(map);
+  }
+
+  google.maps.event.addDomListener(window, 'load', loadApi);
+</script>
+</head>
+
+<body>
+  <div id="googft-mapCanvas"></div></iframe>
+<iframe>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport"></meta>
+<title>StartupsSeptHiring - Google Fusion Tables</title>
+<style type="text/css">
+  html, body, #googft-mapCanvas {
+    height: 300px;
+    margin: 0;
+    padding: 0;
+    width: 500px;
+  }
+</style>
+
+<script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=false&amp;v=3&amp;libraries=visualization"></script>
+
+<script type="text/javascript">
+  if (window.location.protocol == "file:") {
+    alert('This script only works when loaded from a web server,' +
+        ' not from a file on your computer.');
+  }
+  function ftOnLoadClientApi() {
+    gapi.client.setApiKey('AIzaSyByGNZRo_v836WOMxG-BXEnQXvGasl0Qkc');
+  }
+</script>
+<script type="text/javascript" src="https://apis.google.com/js/client.js?onload=ftOnLoadClientApi">
+</script>
+
+<script type="text/javascript">
+  var map;
+
+  function loadApi() {
+    gapi.client.load('fusiontables', 'v1', initialize);
+  }
+
+  function initialize() {
+    var isMobile = (navigator.userAgent.toLowerCase().indexOf('android') > -1) ||
+      (navigator.userAgent.match(/(iPod|iPhone|iPad|BlackBerry|Windows Phone|iemobile)/));
+    if (isMobile) {
+      var viewport = document.querySelector("meta[name=viewport]");
+      viewport.setAttribute('content', 'initial-scale=1.0, user-scalable=no');
+    }
+    var mapDiv = document.getElementById('googft-mapCanvas');
+    mapDiv.style.width = isMobile ? '100%' : '500px';
+    mapDiv.style.height = isMobile ? '100%' : '300px';
+    map = new google.maps.Map(mapDiv, {
+      center: new google.maps.LatLng(40.74009365686845, -73.96901076650391),
+      zoom: 13,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+    var query = 'select col9 from 1EHrziowBiyGULgCCmyN62RcKEMnsi5qtuRP818bz limit 1000';
+    var request = gapi.client.fusiontables.query.sqlGet({ sql: query });
+    request.execute(function(response) {
+      onDataFetched(response);
+    });
+  }
+
+  function onDataFetched(response) {
+    if (response.error) {
+      alert('Unable to fetch data. ' + response.error.message +
+          ' (' + response.error.code + ')');
+    } else {
+      drawHeatmap(extractLocations(response.rows));
+    }
+  }
+
+  function extractLocations(rows) {
+    // Patterns for latitude/longitude in a single field, separated by a space
+    // or comma, with optional north/south/east/west orientation
+    var numberPattern = '([+-]?\\d+(?:\\.\\d*)?)';
+    var latPattern = numberPattern + '\\s*([NS])?';
+    var lngPattern = numberPattern + '\\s*([EW])?';
+    var latLngPattern = latPattern + '(?:\\s+|\\s*,\\s*)' + lngPattern;
+    var northRegexp = /N/i;
+    var eastRegexp = /E/i;
+    var parseRegexp = new RegExp(latLngPattern, 'i');
+    var locations = [];
+    for (var i = 0; i < rows.length; ++i) {
+      var row = rows[i];
+      if (row[0]) {
+        var parts = row[0].match(parseRegexp);
+        if (parts) {
+          var latString = parts[1];
+          var latOrientation = parts[2];
+          var lngString = parts[3];
+          var lngOrientation = parts[4];
+          var lat = parseFloat(latString);
+          var lng = parseFloat(lngString);
+          if (latOrientation) {
+            var latAdjust = northRegexp.test(latOrientation) ? 1 : -1;
+            lat = latAdjust * Math.abs(lat);
+          }
+          if (lngOrientation) {
+            var lngAdjust = eastRegexp.test(lngOrientation) ? 1 : -1;
+            lng = lngAdjust * Math.abs(lng);
+          }
+          var latLng = new google.maps.LatLng(lat, lng);
+          locations.push(latLng);
+        }
+      }
+    }
+    return locations;
+  }
+
+  function drawHeatmap(locations) {
+    var heatmap = new google.maps.visualization.HeatmapLayer({
+       dissipating: true,
+       gradient: [
+         'rgba(102,255,0,0)', 
+         'rgba(147,255,0,1)', 
+         'rgba(193,255,0,1)', 
+         'rgba(238,255,0,1)', 
+         'rgba(244,227,0,1)', 
+         'rgba(244,227,0,1)', 
+         'rgba(249,198,0,1)', 
+         'rgba(255,170,0,1)', 
+         'rgba(255,113,0,1)', 
+         'rgba(255,57,0,1)', 
+         'rgba(255,0,0,1)'
+       ],
+       opacity: 0.7,
+       radius: 20,
+       data: locations
+    });
+    heatmap.setMap(map);
+  }
+
+  google.maps.event.addDomListener(window, 'load', loadApi);
+</script>
+</head>
+
+<body>
+  <div id="googft-mapCanvas"></div>
+</body>
+</html>
